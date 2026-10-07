@@ -45,24 +45,31 @@
 
   /* ---------- Lưu trữ (localStorage) ---------- */
   function defaults() {
-    return { wrong: {}, seen: {}, stats: {}, sessions: { practice: {}, mix: null }, settings: { shuffleOpts: true, theme: 'auto' } };
+    return { wrong: {}, seen: {}, marks: {}, stats: {}, sessions: { practice: {}, mix: null }, settings: { shuffleOpts: true, theme: 'auto' } };
+  }
+  function norm(raw) {
+    var d = defaults();
+    raw = raw || {};
+    d.wrong = raw.wrong || {};
+    d.seen = raw.seen || {};
+    d.marks = raw.marks || {};
+    d.stats = raw.stats || {};
+    if (raw.sessions) { d.sessions.practice = raw.sessions.practice || {}; d.sessions.mix = raw.sessions.mix || null; }
+    d.settings = Object.assign(d.settings, raw.settings || {});
+    return d;
   }
   function load() {
-    var d = defaults();
-    try {
-      var raw = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-      d.wrong = raw.wrong || {};
-      d.seen = raw.seen || {};
-      d.stats = raw.stats || {};
-      if (raw.sessions) { d.sessions.practice = raw.sessions.practice || {}; d.sessions.mix = raw.sessions.mix || null; }
-      d.settings = Object.assign(d.settings, raw.settings || {});
-    } catch (e) { /* bỏ qua */ }
-    return d;
+    try { return norm(JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (e) { return defaults(); }
   }
   var store = load();
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* bỏ qua */ }
     updateWrongBadge();
+  }
+  /* Ghi nhận kết quả một câu: đúng thì xoá khỏi danh sách câu sai, sai thì thêm vào. */
+  function record(q, ok) {
+    if (ok) { store.seen[q.id] = 1; delete store.wrong[q.id]; }
+    else store.wrong[q.id] = (store.wrong[q.id] || 0) + 1;
   }
   function stat(key) {
     if (!store.stats[key]) store.stats[key] = { runs: 0, completed: 0, bestStreak: 0, best: 0 };
@@ -226,7 +233,9 @@
     return h('div', { class: 'qmeta' },
       h('span', { class: 'chip' }, 'Chương ' + it.q.ch + ' · Câu ' + it.q.n),
       h('span', { class: 'chip' }, 'Mức ' + it.q.lv),
-      label ? h('span', { class: 'chip' }, label) : null);
+      label ? h('span', { class: 'chip' }, label) : null,
+      h('span', { class: 'spacer' }),
+      markBtn(it.q));
   }
 
   /* ---------- Trạng thái hiện tại ---------- */
@@ -262,6 +271,14 @@
       h('div', { class: 'actions' },
         h('button', { class: 'btn primary big', onclick: startMix }, 'Bắt đầu đề ' + MIX_SIZE + ' câu')));
 
+    var fun = h('section', { class: 'card wide' },
+      h('div', { class: 'eyebrow' }, 'Giải trí & ghi nhớ'),
+      h('h3', null, 'Minigame và thẻ ghi nhớ'),
+      h('div', { class: 'meta' }, 'Đua 60 giây, sinh tồn 3 mạng, thẻ ghi nhớ — học mà như chơi.'),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn primary', onclick: function () { startGame('race'); } }, '⚡ Đua 60 giây'),
+        h('button', { class: 'btn primary', onclick: function () { startGame('surv'); } }, '❤ Sinh tồn'),
+        h('button', { class: 'btn', onclick: flashMenu }, '🃏 Thẻ ghi nhớ')));
     var pend = pendingList();
     mount(h('div', { class: 'stack' },
       h('div', { class: 'hero' },
@@ -271,7 +288,7 @@
           h('span', { style: 'width:' + Math.round(seenAll / Q.length * 100) + '%' })),
         h('div', { class: 'small muted' }, 'Đã làm đúng ' + seenAll + '/' + Q.length + ' câu (lưu trên trình duyệt này)')),
       pend.length ? h('section', { class: 'stack' }, h('h2', null, 'Đang ôn dở'), pend.map(function (p) { return pendingCard(p, home); })) : null,
-      h('div', { class: 'grid' }, cards, mix)));
+      h('div', { class: 'grid' }, cards, mix, fun)));
   }
 
   /* ---------- Menu chọn phạm vi ôn chương ---------- */
@@ -334,17 +351,15 @@
     if (it.picked !== null) return;
     it.picked = k;
     var ok = it.order[k] === it.q.a;
+    record(it.q, ok);
     if (ok) {
       S.right++; S.streak++;
       if (S.streak > S.best) S.best = S.streak;
-      store.seen[it.q.id] = 1;
-      if (S.cfg.kind === 'wrong') delete store.wrong[it.q.id];
       var st = stat(S.cfg.key);
       if (S.best > st.bestStreak) st.bestStreak = S.best;
     } else {
       S.wrong++; S.streak = 0;
       if (S.wrongIds.indexOf(it.q.id) < 0) S.wrongIds.push(it.q.id);
-      store.wrong[it.q.id] = (store.wrong[it.q.id] || 0) + 1;
     }
     save();
     renderPractice(false);
@@ -501,8 +516,8 @@
     var right = 0;
     S.items.forEach(function (it) {
       var ok = it.picked !== null && it.order[it.picked] === it.q.a;
-      if (ok) { right++; store.seen[it.q.id] = 1; }
-      else store.wrong[it.q.id] = (store.wrong[it.q.id] || 0) + 1;
+      if (ok) right++;
+      record(it.q, ok);
     });
     S.right = right; S.elapsed = Date.now() - S.start;
     var st = stat('mix'); st.runs++; st.completed++; if (right > st.best) st.best = right;
@@ -538,7 +553,7 @@
   }
 
   /* Thẻ xem lại: hiện đủ 4 đáp án, tô đáp án đúng và lựa chọn của bạn (nếu có). */
-  function reviewCard(q, it) {
+  function reviewCard(q, it, extra) {
     var opts = [0, 1, 2, 3].map(function (k) {
       var cls = 'opt';
       var origIdx = it ? it.order[k] : k;   // vị trí gốc của đáp án đang hiển thị ở ô k
@@ -555,7 +570,8 @@
     }
     return h('div', { class: 'card review-item' },
       h('div', { class: 'qmeta' },
-        h('span', { class: 'chip' }, 'Chương ' + q.ch + ' · Câu ' + q.n), status),
+        h('span', { class: 'chip' }, 'Chương ' + q.ch + ' · Câu ' + q.n), status,
+        h('span', { class: 'spacer' }), extra, markBtn(q)),
       h('div', { class: 'qtext' }, q.q),
       h('div', { class: 'opts' }, opts));
   }
@@ -599,6 +615,319 @@
     input.focus();
   }
 
+  /* ---------- Câu đã đánh dấu (★) ---------- */
+  function markIds() { return Object.keys(store.marks).filter(function (id) { return byId[id]; }); }
+  function markBtn(q) {
+    var b = h('button', { class: 'btn ghost star' + (store.marks[q.id] ? ' on' : ''), type: 'button',
+      title: 'Đánh dấu câu này để xem lại sau', 'aria-label': 'Đánh dấu câu hỏi',
+      onclick: function (e) {
+        e.stopPropagation();
+        if (store.marks[q.id]) delete store.marks[q.id]; else store.marks[q.id] = 1;
+        save();
+        b.classList.toggle('on', !!store.marks[q.id]);
+        b.textContent = store.marks[q.id] ? '★' : '☆';
+        b.blur();
+      } }, store.marks[q.id] ? '★' : '☆');
+    return b;
+  }
+  function startMarks() {
+    var ids = markIds();
+    if (!ids.length) { toast('Chưa đánh dấu câu nào. Bấm ☆ ở góc câu hỏi để đánh dấu.'); return; }
+    startPractice({ kind: 'marks', key: 'marks', sid: 'marks', title: 'Ôn câu đã đánh dấu (' + ids.length + ')',
+      pool: ids.map(function (id) { return byId[id]; }), ordered: false });
+  }
+  function byOrder(a, b) { return a.ch - b.ch || a.n - b.n; }
+
+  /* ---------- Trang "Câu sai & đánh dấu" ---------- */
+  function reviewPage(tab, keepScroll) {
+    stopTimer(); S = null;
+    tab = tab || 'wrong';
+    var isWrong = tab === 'wrong';
+    var list = (isWrong ? wrongIds() : markIds()).map(function (id) { return byId[id]; }).sort(byOrder);
+    var tabBtn = function (t, label, n) {
+      return h('button', { class: 'btn' + (t === tab ? ' primary' : ''), onclick: function () { reviewPage(t); } }, label + ' (' + n + ')');
+    };
+    var cards = list.map(function (q) {
+      var extra = isWrong
+        ? [h('span', { class: 'chip' }, 'sai ' + store.wrong[q.id] + ' lần'),
+           h('button', { class: 'btn', title: 'Xoá khỏi danh sách câu sai', onclick: function () {
+             delete store.wrong[q.id]; save(); reviewPage('wrong', true); } }, 'Xoá')]
+        : null;
+      return reviewCard(q, null, extra);
+    });
+    mount(h('div', { class: 'stack' },
+      h('h1', null, 'Câu sai & câu đã đánh dấu'),
+      h('div', { class: 'row' }, tabBtn('wrong', 'Câu sai', wrongIds().length), tabBtn('marks', '★ Đã đánh dấu', markIds().length)),
+      list.length
+        ? h('div', { class: 'row' },
+            h('button', { class: 'btn primary', onclick: isWrong ? startWrongBank : startMarks }, '▶ Ôn ' + list.length + ' câu này'),
+            h('button', { class: 'btn', onclick: function () { flashStart(list, isWrong ? 'Thẻ: câu sai' : 'Thẻ: câu đã đánh dấu', 9999); } }, '🃏 Học bằng thẻ'),
+            isWrong ? h('button', { class: 'btn', onclick: function () {
+              if (confirm('Xoá toàn bộ ' + list.length + ' câu khỏi danh sách câu sai?')) { store.wrong = {}; save(); reviewPage('wrong', true); }
+            } }, 'Xoá tất cả') : null)
+        : null,
+      isWrong ? h('p', { class: 'muted small' }, 'Làm đúng một câu từng sai (ở bất kỳ chế độ nào) sẽ tự xoá câu đó khỏi danh sách. Bạn cũng có thể xoá thủ công.') : null,
+      list.length ? cards : h('p', { class: 'muted' }, isWrong ? 'Chưa có câu sai nào. Tuyệt vời!' : 'Chưa đánh dấu câu nào. Bấm ☆ ở góc phải câu hỏi để đánh dấu.')),
+      keepScroll ? false : true);
+  }
+
+  /* ---------- Thống kê ---------- */
+  function barRow(label, a, b, extra) {
+    var pct = b ? Math.round(a / b * 100) : 0;
+    return h('div', { class: 'barrow' },
+      h('div', { class: 'row between small' }, h('span', null, label), h('span', { class: 'muted' }, a + '/' + b + ' (' + pct + '%)' + (extra || ''))),
+      h('div', { class: 'progress' }, h('span', { style: 'width:' + pct + '%' })));
+  }
+  function statsPage() {
+    stopTimer(); S = null;
+    var seenAll = Q.filter(function (q) { return store.seen[q.id]; }).length;
+    var blocks = [1, 2, 3].map(function (ch) {
+      var list = chapterQs(ch);
+      var rows = CHAPTERS[ch].sections.map(function (s) {
+        var pool = list.filter(function (q) { return q.n >= s.from && q.n <= s.to; });
+        var seen = pool.filter(function (q) { return store.seen[q.id]; }).length;
+        var wr = pool.filter(function (q) { return store.wrong[q.id]; }).length;
+        return barRow(s.name, seen, pool.length, wr ? ' · đang sai ' + wr : '');
+      });
+      var st = stat('ch' + ch);
+      return h('div', { class: 'card stack' },
+        h('h3', null, 'Chương ' + ch + ': ' + CHAPTERS[ch].title),
+        h('div', { class: 'muted small' }, 'Đã bắt đầu ôn ' + st.runs + ' lần · hoàn thành ' + st.completed + ' lần · chuỗi đúng dài nhất ' + st.bestStreak),
+        rows);
+    });
+    var top = wrongIds().sort(function (a, b) { return store.wrong[b] - store.wrong[a]; }).slice(0, 10).map(function (id) {
+      var q = byId[id];
+      return h('div', { class: 'toprow' },
+        h('span', { class: 'chip' }, 'C' + q.ch + '.' + q.n),
+        h('span', { class: 'toptxt' }, q.q),
+        h('span', { class: 'bad-t small' }, 'sai ' + store.wrong[id] + ' lần'));
+    });
+    var mx = stat('mix'), rc = stat('race'), sv = stat('surv');
+    mount(h('div', { class: 'stack' },
+      h('h1', null, 'Thống kê'),
+      h('div', { class: 'card stack' },
+        barRow('Tổng tiến độ (đã làm đúng)', seenAll, Q.length),
+        h('div', { class: 'muted small' },
+          'Đang có ' + wrongIds().length + ' câu sai · ' + markIds().length + ' câu đã đánh dấu · ' +
+          'Ôn tổng hợp: ' + mx.runs + ' đề, điểm cao nhất ' + mx.best + '/' + MIX_SIZE + ' · ' +
+          'Đua 60s kỷ lục ' + rc.best + ' · Sinh tồn kỷ lục ' + sv.best)),
+      blocks,
+      h('div', { class: 'card stack' },
+        h('h3', null, 'Câu hay sai nhất'),
+        top.length ? top : h('p', { class: 'muted' }, 'Chưa có dữ liệu.'))));
+  }
+
+  /* ---------- Minigame ---------- */
+  function gameCard(title, desc, meta, fn) {
+    return h('div', { class: 'card gcard' },
+      h('h3', null, title), h('p', { class: 'muted small' }, desc),
+      meta ? h('div', { class: 'meta small' }, meta) : null,
+      h('div', { class: 'actions' }, h('button', { class: 'btn primary', onclick: fn }, 'Chơi')));
+  }
+  function gameMenu() {
+    stopTimer(); S = null;
+    var r = stat('race'), s = stat('surv');
+    mount(h('div', { class: 'stack' },
+      h('button', { class: 'btn ghost', onclick: home }, '← Trang chủ'),
+      h('h1', null, 'Minigame'),
+      h('p', { class: 'muted' }, 'Câu hỏi lấy ngẫu nhiên từ cả ' + Q.length + ' câu. Làm đúng một câu từng sai sẽ xoá nó khỏi danh sách câu sai; làm sai thì câu đó được thêm vào.'),
+      h('div', { class: 'grid' },
+        gameCard('⚡ Đua 60 giây', 'Trả lời càng nhiều càng tốt trong 60 giây. Đúng +1 điểm, sai bị trừ 5 giây.',
+          r.best ? 'Kỷ lục: ' + r.best + ' điểm · đã chơi ' + r.runs + ' lần' : 'Chưa chơi', function () { startGame('race'); }),
+        gameCard('❤ Sinh tồn 3 mạng', 'Sai một câu mất một mạng, hết mạng là thua. Trụ được bao nhiêu câu?',
+          s.best ? 'Kỷ lục: ' + s.best + ' câu · đã chơi ' + s.runs + ' lần' : 'Chưa chơi', function () { startGame('surv'); }),
+        gameCard('🃏 Thẻ ghi nhớ', 'Lật thẻ xem đáp án, tự chấm "đã nhớ" hay "chưa nhớ"; thẻ chưa nhớ sẽ quay lại cuối bộ.',
+          null, flashMenu))));
+  }
+  function startGame(mode) {
+    stopTimer();
+    S = { view: 'game', mode: mode, pool: shuffle(Q), idx: 0, score: 0, lives: 3, combo: 0, bestCombo: 0, missed: [],
+          locked: false, over: false, cur: null, deadline: Date.now() + 60000 };
+    if (mode === 'race') {
+      var g = S;
+      timer = setInterval(function () {
+        if (S !== g || g.over) return;
+        var left = g.deadline - Date.now();
+        if (left <= 0) { endGame(); return; }
+        var el = document.getElementById('gtime');
+        if (el) el.textContent = Math.ceil(left / 1000) + 's';
+      }, 250);
+    }
+    nextGameQ();
+  }
+  function nextGameQ() {
+    if (S.idx >= S.pool.length) { S.pool = shuffle(Q); S.idx = 0; }
+    S.cur = makeItem(S.pool[S.idx++]);
+    S.locked = false;
+    renderGame();
+  }
+  function renderGame(scroll) {
+    var it = S.cur, cp = correctPos(it);
+    var opts = [0, 1, 2, 3].map(function (k) {
+      var state = '';
+      if (S.locked) state = k === cp ? 'correct' : (k === it.picked ? 'wrong' : 'dim');
+      var b = optionButton(it, k, state, function () { gamePick(k); });
+      if (S.locked) b.setAttribute('disabled', '');
+      return b;
+    });
+    var hud = S.mode === 'race'
+      ? h('span', null, '⏱ ', h('b', { id: 'gtime' }, Math.max(0, Math.ceil((S.deadline - Date.now()) / 1000)) + 's'))
+      : h('span', { class: 'hearts', title: 'Số mạng còn lại' }, new Array(Math.max(S.lives, 0) + 1).join('❤') + new Array(3 - Math.max(S.lives, 0) + 1).join('🖤'));
+    mount(h('div', { class: 'stack' },
+      h('div', { class: 'hud' },
+        h('b', null, S.mode === 'race' ? '⚡ Đua 60 giây' : '❤ Sinh tồn'),
+        h('div', { class: 'stats' }, hud,
+          h('span', null, 'Điểm ', h('b', null, S.score)),
+          h('span', null, 'Combo ', h('b', null, S.combo))),
+        h('button', { class: 'btn ghost', onclick: function () { if (confirm('Thoát ván này?')) gameMenu(); } }, 'Thoát')),
+      h('div', { class: 'card qcard' },
+        qHeader(it),
+        h('div', { class: 'qtext' }, it.q.q),
+        h('div', { class: 'opts' }, opts),
+        S.locked ? h('div', { class: 'feedback ' + (it.order[it.picked] === it.q.a ? 'ok' : 'bad') },
+          it.order[it.picked] === it.q.a ? '✔ Chính xác!' : '✘ Đáp án đúng là ' + LETTERS[cp] + '.') : null)), scroll);
+  }
+  function gamePick(k) {
+    var g = S;
+    if (!g || g.view !== 'game' || g.locked || g.over) return;
+    var it = g.cur;
+    it.picked = k; g.locked = true;
+    var ok = it.order[k] === it.q.a;
+    record(it.q, ok);
+    if (ok) { g.score++; g.combo++; if (g.combo > g.bestCombo) g.bestCombo = g.combo; }
+    else {
+      g.combo = 0;
+      if (g.missed.indexOf(it.q.id) < 0) g.missed.push(it.q.id);
+      if (g.mode === 'surv') g.lives--; else g.deadline -= 5000;
+    }
+    save();
+    renderGame(false);
+    var lost = !ok && g.mode === 'surv' && g.lives <= 0;
+    setTimeout(function () {
+      if (S !== g || g.over) return;
+      if (lost || (g.mode === 'race' && Date.now() >= g.deadline)) endGame(); else nextGameQ();
+    }, ok ? 600 : 1500);
+  }
+  function endGame() {
+    var g = S;
+    if (!g || g.over) return;
+    g.over = true; stopTimer();
+    var st = stat(g.mode);
+    st.runs++;
+    var record_ = g.score > st.best;
+    if (record_) st.best = g.score;
+    save();
+    var again = function () { startGame(g.mode); };
+    mount(h('div', { class: 'stack' },
+      h('div', { class: 'card score' },
+        h('div', { class: 'muted' }, g.mode === 'race' ? 'Hết giờ! · Đua 60 giây' : 'Hết mạng! · Sinh tồn'),
+        h('div', { class: 'big' }, g.score),
+        h('p', null, record_ && g.score > 0 ? '🏆 Kỷ lục mới!' : 'Kỷ lục hiện tại: ' + st.best, ' · Combo dài nhất: ' + g.bestCombo),
+        h('div', { class: 'row', style: 'justify-content:center' },
+          h('button', { class: 'btn primary', onclick: again }, '↻ Chơi lại'),
+          h('button', { class: 'btn', onclick: gameMenu }, 'Minigame khác'),
+          h('button', { class: 'btn', onclick: home }, 'Trang chủ'))),
+      g.missed.length ? h('h2', null, 'Các câu sai trong ván này') : null,
+      g.missed.map(function (id) { return reviewCard(byId[id], null); })));
+  }
+
+  /* ---------- Thẻ ghi nhớ ---------- */
+  function flashMenu() {
+    stopTimer(); S = null;
+    var limit = 20;
+    var sel = h('select', { class: 'search', 'aria-label': 'Số thẻ', onchange: function (e) { limit = parseInt(e.target.value, 10); } },
+      h('option', { value: '20' }, '20 thẻ'), h('option', { value: '50' }, '50 thẻ'),
+      h('option', { value: '100' }, '100 thẻ'), h('option', { value: '9999' }, 'Tất cả'));
+    var src = function (label, pool) {
+      return h('button', { class: 'btn', disabled: pool.length ? null : true,
+        onclick: function () { flashStart(pool, 'Thẻ: ' + label, limit); } }, label + ' (' + pool.length + ')');
+    };
+    mount(h('div', { class: 'stack' },
+      h('button', { class: 'btn ghost', onclick: gameMenu }, '← Minigame'),
+      h('h1', null, '🃏 Thẻ ghi nhớ'),
+      h('p', { class: 'muted' }, 'Đọc câu hỏi, tự nhớ đáp án rồi lật thẻ để kiểm tra. Phím tắt: Space lật thẻ, ← chưa nhớ, → đã nhớ.'),
+      h('div', { class: 'card stack' },
+        h('div', { class: 'row' }, h('b', null, 'Số thẻ mỗi lượt'), sel),
+        h('b', null, 'Chọn nguồn thẻ'),
+        h('div', { class: 'row' },
+          src('Tất cả', Q), src('Chương 1', chapterQs(1)), src('Chương 2', chapterQs(2)), src('Chương 3', chapterQs(3)),
+          src('Câu sai', wrongIds().map(function (id) { return byId[id]; })),
+          src('Đã đánh dấu', markIds().map(function (id) { return byId[id]; }))))));
+  }
+  function flashStart(pool, title, limit) {
+    stopTimer();
+    var deck = shuffle(pool).slice(0, limit);
+    if (!deck.length) { toast('Không có thẻ nào.'); return; }
+    S = { view: 'flash', title: title, deck: deck, total: deck.length, known: 0, again: 0, flipped: false };
+    renderFlash();
+  }
+  function flashFlip() { if (S && S.view === 'flash' && S.deck.length) { S.flipped = !S.flipped; renderFlash(false); } }
+  function flashRate(known) {
+    if (!S.flipped) return;
+    var q = S.deck.shift();
+    if (known) S.known++; else { S.again++; S.deck.push(q); }
+    S.flipped = false;
+    renderFlash();
+  }
+  function renderFlash(scroll) {
+    if (!S.deck.length) {
+      mount(h('div', { class: 'stack' },
+        h('div', { class: 'card score' },
+          h('div', { class: 'muted' }, S.title),
+          h('div', { class: 'big' }, '🎉'),
+          h('p', null, 'Bạn đã nhớ hết ' + S.total + ' thẻ (lật lại ' + S.again + ' lần).'),
+          h('div', { class: 'row', style: 'justify-content:center' },
+            h('button', { class: 'btn primary', onclick: flashMenu }, 'Bộ thẻ khác'),
+            h('button', { class: 'btn', onclick: home }, 'Trang chủ')))));
+      return;
+    }
+    var q = S.deck[0];
+    var back = S.flipped
+      ? h('div', { class: 'opts' }, [0, 1, 2, 3].map(function (k) {
+          return h('div', { class: 'opt' + (k === q.a ? ' correct' : ' dim') },
+            h('span', { class: 'key' }, LETTERS[k]), h('span', { class: 'txt' }, q.o[k]));
+        }))
+      : h('div', { class: 'muted small' }, 'Chạm vào thẻ hoặc bấm Space để lật xem đáp án');
+    mount(h('div', { class: 'stack' },
+      h('div', { class: 'hud' },
+        h('b', null, S.title),
+        h('div', { class: 'stats' }, h('span', null, 'Đã nhớ ', h('b', null, S.known + '/' + S.total)), h('span', null, 'Còn ', h('b', null, S.deck.length))),
+        h('button', { class: 'btn ghost', onclick: flashMenu }, 'Thoát')),
+      h('div', { class: 'progress' }, h('span', { style: 'width:' + Math.round(S.known / S.total * 100) + '%' })),
+      h('div', { class: 'card flashcard' + (S.flipped ? ' back' : ''), tabindex: 0, role: 'button', onclick: function (e) { if (!S.flipped && e.target.closest('.star') === null) flashFlip(); } },
+        qHeader({ q: q }),
+        h('div', { class: 'qtext' }, q.q),
+        back),
+      S.flipped
+        ? h('div', { class: 'row', style: 'justify-content:center' },
+            h('button', { class: 'btn', onclick: function () { flashRate(false); } }, '✘ Chưa nhớ'),
+            h('button', { class: 'btn primary', onclick: function () { flashRate(true); } }, '✔ Đã nhớ'))
+        : h('div', { class: 'row', style: 'justify-content:center' }, h('button', { class: 'btn primary', onclick: flashFlip }, 'Lật thẻ'))), scroll);
+  }
+
+  /* ---------- Sao lưu / khôi phục ---------- */
+  function exportData() {
+    var d = new Date();
+    var name = 'on-triet-tien-do-' + d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + '.json';
+    var url = URL.createObjectURL(new Blob([JSON.stringify(store)], { type: 'application/json' }));
+    var a = h('a', { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast('Đã tải file sao lưu.');
+  }
+  function importData(file, done) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      try {
+        var raw = JSON.parse(fr.result);
+        if (!raw || typeof raw !== 'object' || (!raw.wrong && !raw.seen && !raw.stats)) throw new Error('bad');
+        if (!confirm('Thay toàn bộ tiến độ hiện tại bằng dữ liệu trong file sao lưu?')) return;
+        store = norm(raw); save(); done(); toast('Đã khôi phục tiến độ.');
+      } catch (e) { toast('File không hợp lệ.'); }
+    };
+    fr.readAsText(file);
+  }
+
   /* ---------- Cài đặt ---------- */
   function openSettings() {
     var dlg = h('dialog', null);
@@ -606,10 +935,19 @@
     var theme = h('select', { class: 'search', onchange: function (e) { store.settings.theme = e.target.value; save(); applyTheme(); } },
       h('option', { value: 'auto' }, 'Theo hệ thống'), h('option', { value: 'light' }, 'Sáng'), h('option', { value: 'dark' }, 'Tối'));
     theme.value = store.settings.theme;
+    var fileIn = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: function (e) {
+      var f = e.target.files[0];
+      if (f) importData(f, function () { dlg.close(); home(); });
+    } });
     dlg.append(
+      fileIn,
       h('h2', null, 'Cài đặt'),
       h('label', { class: 'switch-row' }, h('span', null, 'Xáo thứ tự đáp án A, B, C, D (câu "Tất cả đáp án..." giữ nguyên)'), shuf),
       h('div', { class: 'switch-row' }, h('span', null, 'Giao diện'), theme),
+      h('div', { class: 'switch-row' }, h('span', null, 'Sao lưu tiến độ (tải file .json)'),
+        h('button', { class: 'btn', onclick: exportData }, 'Xuất')),
+      h('div', { class: 'switch-row' }, h('span', null, 'Khôi phục từ file sao lưu'),
+        h('button', { class: 'btn', onclick: function () { fileIn.click(); } }, 'Nhập')),
       h('div', { class: 'switch-row' }, h('span', null, 'Xoá toàn bộ tiến độ & câu sai'),
         h('button', { class: 'btn', onclick: function () {
           if (confirm('Xoá toàn bộ tiến độ và danh sách câu sai trên trình duyệt này?')) {
@@ -636,6 +974,13 @@
       else if (key === 'enter' || key === 'arrowright') {
         if (S.items[S.i].picked !== null) { e.preventDefault(); nextPractice(); }
       } else if (key === 'r' && S.cfg.kind === 'chapter' && S.items[S.i].picked !== null) restartPractice();
+    } else if (S.view === 'game') {
+      if (k >= 0) gamePick(k);
+    } else if (S.view === 'flash') {
+      if (tag === 'BUTTON' && (key === ' ' || key === 'enter')) return;
+      if (key === ' ' || (key === 'enter' && !S.flipped)) { e.preventDefault(); flashFlip(); }
+      else if (S.flipped && (key === 'arrowleft' || key === '1')) flashRate(false);
+      else if (S.flipped && (key === 'arrowright' || key === '2')) flashRate(true);
     } else if (S.view === 'mix' && !S.submitted) {
       if (k >= 0) pickMix(k);
       else if (key === 'arrowright' && S.i + 1 < MIX_SIZE) { S.i++; renderMix(); }
@@ -647,7 +992,9 @@
   document.getElementById('navHome').addEventListener('click', home);
   document.getElementById('brand').addEventListener('click', function (e) { e.preventDefault(); home(); });
   document.getElementById('navBrowse').addEventListener('click', browse);
-  document.getElementById('navWrong').addEventListener('click', startWrongBank);
+  document.getElementById('navWrong').addEventListener('click', function () { reviewPage('wrong'); });
+  document.getElementById('navStats').addEventListener('click', statsPage);
+  document.getElementById('navGame').addEventListener('click', gameMenu);
   document.getElementById('navSettings').addEventListener('click', openSettings);
   /* Đóng tab hoặc chuyển tab: tự lưu phần đang làm để lần sau bấm "Làm tiếp". */
   window.addEventListener('pagehide', saveSession);
