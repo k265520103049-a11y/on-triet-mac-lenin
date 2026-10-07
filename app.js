@@ -39,6 +39,11 @@
     }
   };
 
+  var EXPLAIN = window.EXPLAIN || {};
+  function explainBox(q) {
+    return EXPLAIN[q.id] ? h('div', { class: 'explain' }, h('b', null, 'Giải thích: '), EXPLAIN[q.id]) : null;
+  }
+
   var byId = {};
   Q.forEach(function (q) { byId[q.id] = q; });
   function chapterQs(ch) { return Q.filter(function (q) { return q.ch === ch; }); }
@@ -162,7 +167,7 @@
       };
       save();
     } else if (S.view === 'mix' && !S.submitted && answeredCount(S.items)) {
-      store.sessions.mix = { items: serItems(S.items), i: S.i, elapsed: Date.now() - S.start, ts: Date.now() };
+      store.sessions.mix = { items: serItems(S.items), i: S.i, elapsed: Date.now() - S.start, limit: S.limit || 0, ts: Date.now() };
       save();
     }
   }
@@ -185,7 +190,7 @@
     if (!s) return;
     var items = desItems(s.items);
     if (items.length !== MIX_SIZE) { dropMix(); toast('Đề cũ không còn hợp lệ.'); home(); return; }
-    S = { view: 'mix', items: items, i: Math.min(s.i, items.length - 1), start: Date.now() - (s.elapsed || 0), submitted: false };
+    S = { view: 'mix', items: items, i: Math.min(s.i, items.length - 1), start: Date.now() - (s.elapsed || 0), submitted: false, limit: s.limit || 0 };
     renderMix();
     runMixTimer();
   }
@@ -263,13 +268,18 @@
           pendingList(ch).length ? h('button', { class: 'btn', onclick: function () { chapterMenu(ch); } }, '▶ Có phần ôn dở') : null));
     });
     var mixStat = stat('mix');
+    var limSel = h('select', { class: 'search', 'aria-label': 'Giới hạn thời gian', onchange: function (e) { store.settings.mixLimit = parseInt(e.target.value, 10); save(); } },
+      h('option', { value: '0' }, 'Không giới hạn giờ'), h('option', { value: '20' }, 'Thi thử 20 phút'),
+      h('option', { value: '30' }, 'Thi thử 30 phút'), h('option', { value: '45' }, 'Thi thử 45 phút'));
+    limSel.value = String(store.settings.mixLimit || 0);
     var mix = h('section', { class: 'card mix' },
       h('div', { class: 'eyebrow' }, 'Ôn tổng hợp'),
       h('h3', null, MIX_SIZE + ' câu ngẫu nhiên từ cả 3 chương'),
       h('div', { class: 'meta' }, 'Làm như đi thi: chọn đáp án, nộp bài rồi xem điểm và đáp án. Mỗi lần bấm là một đề mới.' +
         (mixStat.runs ? ' · Đã làm ' + mixStat.runs + ' lần, điểm cao nhất ' + mixStat.best + '/' + MIX_SIZE : '')),
       h('div', { class: 'actions' },
-        h('button', { class: 'btn primary big', onclick: startMix }, 'Bắt đầu đề ' + MIX_SIZE + ' câu')));
+        limSel,
+        h('button', { class: 'btn primary big', onclick: function () { startMix(parseInt(limSel.value, 10)); } }, 'Bắt đầu đề ' + MIX_SIZE + ' câu')));
 
     var fun = h('section', { class: 'card wide' },
       h('div', { class: 'eyebrow' }, 'Giải trí & ghi nhớ'),
@@ -396,12 +406,12 @@
       var isLast = S.i + 1 >= total;
       if (ok) {
         feedback = h('div', { class: 'feedback ok' },
-          h('b', null, '✔ Chính xác!'),
+          h('b', null, '✔ Chính xác!'), explainBox(it.q),
           h('div', { class: 'row' },
             h('button', { class: 'btn primary', id: 'nextBtn', onclick: nextPractice }, isLast ? 'Xem kết quả' : 'Câu tiếp theo →')));
       } else {
         feedback = h('div', { class: 'feedback bad' },
-          h('b', null, '✘ Chưa đúng. Đáp án đúng là ' + LETTERS[cp] + '.'),
+          h('b', null, '✘ Chưa đúng. Đáp án đúng là ' + LETTERS[cp] + '.'), explainBox(it.q),
           h('div', { class: 'row' },
             S.cfg.kind === 'chapter'
               ? h('button', { class: 'btn primary', id: 'restartBtn', onclick: restartPractice }, '↻ Làm lại từ đầu (xáo ngẫu nhiên)')
@@ -457,9 +467,10 @@
   }
 
   /* ---------- Ôn tổng hợp (đề 40 câu) ---------- */
-  function startMix() {
+  function startMix(limitMin) {
+    if (typeof limitMin !== 'number') limitMin = store.settings.mixLimit || 0;
     var pool = shuffle(Q).slice(0, MIX_SIZE);
-    S = { view: 'mix', items: pool.map(makeItem), i: 0, start: Date.now(), submitted: false };
+    S = { view: 'mix', items: pool.map(makeItem), i: 0, start: Date.now(), submitted: false, limit: limitMin * 60000 };
     dropMix();
     renderMix();
     runMixTimer();
@@ -468,8 +479,14 @@
     stopTimer();
     timer = setInterval(function () {
       var el = document.getElementById('timer');
-      if (el && S && S.view === 'mix' && !S.submitted) el.textContent = fmtTime(Date.now() - S.start);
+      if (!S || S.view !== 'mix' || S.submitted) return;
+      if (el) el.textContent = mixClock();
+      if (S.limit && Date.now() - S.start >= S.limit) { toast('Hết giờ! Bài được nộp tự động.'); submitMix(true); }
     }, 1000);
+  }
+  function mixClock() {
+    var used = Date.now() - S.start;
+    return S.limit ? fmtTime(Math.max(0, S.limit - used)) : fmtTime(used);
   }
   function pickMix(k) {
     S.items[S.i].picked = k;
@@ -492,7 +509,7 @@
       h('div', { class: 'hud' },
         h('div', null, h('b', null, 'Ôn tổng hợp · ' + MIX_SIZE + ' câu')),
         h('div', { class: 'stats' },
-          h('span', null, '⏱ ', h('b', { id: 'timer' }, fmtTime(Date.now() - S.start))),
+          h('span', { class: S.limit && S.limit - (Date.now() - S.start) < 300000 ? 'bad-t' : null }, S.limit ? '⏳ Còn ' : '⏱ ', h('b', { id: 'timer' }, mixClock())),
           h('span', null, 'Đã trả lời ', h('b', null, done + '/' + MIX_SIZE)))),
       h('div', { class: 'navgrid' }, mixNavDots()),
       h('div', { class: 'card qcard' },
@@ -509,9 +526,9 @@
         h('button', { class: 'btn', onclick: function () { saveSession(); home(); toast('Đã lưu đề. Bạn có thể làm tiếp ở Trang chủ.'); } }, 'Lưu & thoát'),
         h('button', { class: 'btn ghost', onclick: function () { if (confirm('Bỏ đề này? Tiến độ đề sẽ mất.')) { dropMix(); home(); } } }, 'Bỏ đề'))), scroll);
   }
-  function submitMix() {
+  function submitMix(auto) {
     var left = S.items.filter(function (x) { return x.picked === null; }).length;
-    if (left && !confirm('Còn ' + left + ' câu chưa trả lời (tính là sai). Vẫn nộp bài?')) return;
+    if (auto !== true && left && !confirm('Còn ' + left + ' câu chưa trả lời (tính là sai). Vẫn nộp bài?')) return;
     S.submitted = true; stopTimer(); store.sessions.mix = null;
     var right = 0;
     S.items.forEach(function (it) {
@@ -519,7 +536,7 @@
       if (ok) right++;
       record(it.q, ok);
     });
-    S.right = right; S.elapsed = Date.now() - S.start;
+    S.right = right; S.elapsed = S.limit ? Math.min(Date.now() - S.start, S.limit) : Date.now() - S.start;
     var st = stat('mix'); st.runs++; st.completed++; if (right > st.best) st.best = right;
     save();
     renderMixResult('all');
@@ -541,7 +558,7 @@
         h('p', null, 'Quy đổi thang 10: ', h('b', null, score10), ' điểm (mỗi câu 0,25 điểm)'),
         h('div', { class: 'navgrid', style: 'justify-content:center' }, dots),
         h('div', { class: 'row', style: 'justify-content:center' },
-          h('button', { class: 'btn primary', onclick: startMix }, 'Làm đề mới'),
+          h('button', { class: 'btn primary', onclick: function () { startMix(); } }, 'Làm đề mới'),
           h('button', { class: 'btn', onclick: startWrongBank }, 'Ôn các câu sai'),
           h('button', { class: 'btn', onclick: home }, 'Trang chủ'))),
       h('div', { class: 'row' },
@@ -573,7 +590,8 @@
         h('span', { class: 'chip' }, 'Chương ' + q.ch + ' · Câu ' + q.n), status,
         h('span', { class: 'spacer' }), extra, markBtn(q)),
       h('div', { class: 'qtext' }, q.q),
-      h('div', { class: 'opts' }, opts));
+      h('div', { class: 'opts' }, opts),
+      explainBox(q));
   }
 
   /* ---------- Tra cứu ---------- */
@@ -886,7 +904,7 @@
       ? h('div', { class: 'opts' }, [0, 1, 2, 3].map(function (k) {
           return h('div', { class: 'opt' + (k === q.a ? ' correct' : ' dim') },
             h('span', { class: 'key' }, LETTERS[k]), h('span', { class: 'txt' }, q.o[k]));
-        }))
+        }).concat([explainBox(q)]))
       : h('div', { class: 'muted small' }, 'Chạm vào thẻ hoặc bấm Space để lật xem đáp án');
     mount(h('div', { class: 'stack' },
       h('div', { class: 'hud' },
@@ -999,6 +1017,9 @@
   /* Đóng tab hoặc chuyển tab: tự lưu phần đang làm để lần sau bấm "Làm tiếp". */
   window.addEventListener('pagehide', saveSession);
   document.addEventListener('visibilitychange', function () { if (document.hidden) saveSession(); });
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
   applyTheme();
   updateWrongBadge();
   if (!Q.length) {
