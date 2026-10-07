@@ -12,6 +12,9 @@ Web ôn trắc nghiệm tĩnh (HTML + CSS + JavaScript thuần), không cần c�
 - **Minigame**: ⚡ Đua 60 giây (sai trừ 5 giây), ❤ Sinh tồn 3 mạng, 🃏 Thẻ ghi nhớ (Space lật thẻ, ← chưa nhớ, → đã nhớ).
 - **Thống kê**: tiến độ theo chương/mục, kỷ lục minigame, 10 câu hay sai nhất.
 - **Sao lưu / khôi phục**: ⚙ Cài đặt → Xuất / Nhập file .json để chuyển tiến độ sang máy khác.
+- **Thi thử có giờ**: ở thẻ Ôn tổng hợp chọn 20/30/45 phút; đồng hồ đếm ngược, hết giờ tự nộp bài.
+- **Cài như app, dùng khi mất mạng (PWA)**: mở trang trên điện thoại → menu trình duyệt → "Thêm vào màn hình chính". Cần các file `sw.js`, `manifest.webmanifest`, `icon*`. Khi có mạng, web luôn tải bản mới nhất.
+- **Giải thích đáp án**: điền vào `explain.js` theo mẫu `"c2-15": "..."`; câu nào có giải thích sẽ hiện sau khi trả lời.
 - **Ôn câu sai**: tự gom các câu từng làm sai (lưu trong trình duyệt).
 - **Tra cứu**: tìm câu hỏi theo từ khoá (không cần gõ dấu), xem đáp án đúng.
 - Phím tắt: `1-4` hoặc `A-D` chọn đáp án, `Enter` câu tiếp, `R` làm lại từ đầu.
