@@ -7,6 +7,11 @@ Web ôn trắc nghiệm tĩnh (HTML + CSS + JavaScript thuần), không cần c�
 - **Ôn chương**: làm từng câu, có đáp án ngay. Chọn sai sẽ hiện nút **Làm lại từ đầu**, xáo ngẫu nhiên thứ tự câu (và thứ tự đáp án).
 - **Ôn tổng hợp**: 40 câu ngẫu nhiên từ 600 câu, có đồng hồ, bảng chọn câu, nộp bài, điểm thang 10 và xem lại bài.
 - **Làm tiếp**: đang ôn chương hoặc làm đề tổng hợp dở thì bấm *Lưu & thoát* (hoặc đóng tab), lần sau về Trang chủ bấm **▶ Làm tiếp** là vào đúng câu đang làm, giữ nguyên điểm và thời gian.
+- **Câu sai tự giảm**: làm đúng một câu từng sai (ở bất kỳ chế độ nào: ôn chương, ôn tổng hợp, minigame) thì câu đó tự bị xoá khỏi danh sách câu sai. Có thể xoá thủ công từng câu hoặc "Xoá tất cả" ở mục **Câu sai**.
+- **★ Đánh dấu câu**: bấm ☆ ở góc câu hỏi để lưu lại, xem và ôn riêng ở mục **Câu sai → Đã đánh dấu**.
+- **Minigame**: ⚡ Đua 60 giây (sai trừ 5 giây), ❤ Sinh tồn 3 mạng, 🃏 Thẻ ghi nhớ (Space lật thẻ, ← chưa nhớ, → đã nhớ).
+- **Thống kê**: tiến độ theo chương/mục, kỷ lục minigame, 10 câu hay sai nhất.
+- **Sao lưu / khôi phục**: ⚙ Cài đặt → Xuất / Nhập file .json để chuyển tiến độ sang máy khác.
 - **Ôn câu sai**: tự gom các câu từng làm sai (lưu trong trình duyệt).
 - **Tra cứu**: tìm câu hỏi theo từ khoá (không cần gõ dấu), xem đáp án đúng.
 - Phím tắt: `1-4` hoặc `A-D` chọn đáp án, `Enter` câu tiếp, `R` làm lại từ đầu.
