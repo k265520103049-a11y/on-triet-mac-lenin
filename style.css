@@ -192,6 +192,23 @@ dialog { border: 1px solid var(--line); border-radius: var(--radius); background
 dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 
+.card.wide { grid-column: 1 / -1; }
+.star { font-size: 1.25rem; color: var(--muted); padding: 2px 8px; line-height: 1; }
+.star.on { color: var(--gold); }
+.hearts { letter-spacing: 2px; }
+.gcard { display: flex; flex-direction: column; gap: 6px; }
+.gcard h3 { margin: 0; }
+.gcard p { margin: 0; }
+.gcard .actions { margin-top: auto; padding-top: 8px; }
+.barrow { margin-top: 10px; }
+.barrow .row { margin-bottom: 4px; gap: 8px; }
+.toprow { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.toprow .toptxt { flex: 1; font-size: .92rem; }
+.flashcard { cursor: pointer; min-height: 220px; text-align: left; }
+.flashcard.back { cursor: default; border-color: var(--ok); }
+.flashcard:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent); }
+.flashcard .opt { cursor: default; padding: 8px 12px; }
+
 @media (max-width: 520px) {
   h1 { font-size: 1.4rem; }
   .qtext { font-size: 1.04rem; }
