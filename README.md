@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/33253974/README.md)
 # Ôn tập Triết học Mác - Lênin (BAS 123)
 
 Web ôn trắc nghiệm tĩnh (HTML + CSS + JavaScript thuần), không cần cài đặt hay máy chủ.
@@ -9,7 +10,7 @@ Web ôn trắc nghiệm tĩnh (HTML + CSS + JavaScript thuần), không cần c�
 - **Làm tiếp**: đang ôn chương hoặc làm đề tổng hợp dở thì bấm *Lưu & thoát* (hoặc đóng tab), lần sau về Trang chủ bấm **▶ Làm tiếp** là vào đúng câu đang làm, giữ nguyên điểm và thời gian.
 - **Câu sai tự giảm**: làm đúng một câu từng sai (ở bất kỳ chế độ nào: ôn chương, ôn tổng hợp, minigame) thì câu đó tự bị xoá khỏi danh sách câu sai. Có thể xoá thủ công từng câu hoặc "Xoá tất cả" ở mục **Câu sai**.
 - **★ Đánh dấu câu**: bấm ☆ ở góc câu hỏi để lưu lại, xem và ôn riêng ở mục **Câu sai → Đã đánh dấu**.
-- **Minigame**: ⚡ Đua 60 giây (sai trừ 5 giây), ❤ Sinh tồn 3 mạng, 🃏 Thẻ ghi nhớ (Space lật thẻ, ← chưa nhớ, → đã nhớ).
+- **Gameshow truyền hình**: 🏆 Ai là triệu phú Triết học (15 câu, 3 quyền trợ giúp, mốc an toàn và quyền dừng chơi); 🔔 Rung chuông vàng Triết học (20 câu liên tiếp, có quyền cứu trợ); 🏔️ Đường lên đỉnh Olympia (10 câu, 15 giây/câu, Ngôi sao hy vọng nhân đôi điểm).
 - **Thống kê**: tiến độ theo chương/mục, kỷ lục minigame, 10 câu hay sai nhất.
 - **Sao lưu / khôi phục**: ⚙ Cài đặt → Xuất / Nhập file .json để chuyển tiến độ sang máy khác.
 - **Thi thử có giờ**: ở thẻ Ôn tổng hợp chọn 20/30/45 phút; đồng hồ đếm ngược, hết giờ tự nộp bài.
@@ -45,3 +46,4 @@ Chạy thử trên máy: mở `index.html` bằng trình duyệt là được.
 
 ## Lưu ý
 File đề gốc không kèm đáp án, nên đáp án trong `questions.js` được lập theo giáo trình Triết học Mác - Lênin. Giảng viên nên rà lại, nhất là các câu có nhiều đáp án gần giống nhau.
+\n\n## Bản chuẩn Gameshow\n\nBản này thay các minigame ngắn bằng ba chế độ gameshow gắn với ngân hàng câu hỏi Triết học Mác – Lênin. Điểm số và kỷ lục được lưu cục bộ trên trình duyệt; dữ liệu không tự đồng bộ giữa các thiết bị. Khi triển khai, hãy rà soát đáp án theo giáo trình trước khi dùng làm đáp án chuẩn để chấm.\n
