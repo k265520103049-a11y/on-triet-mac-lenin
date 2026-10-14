@@ -592,6 +592,57 @@
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
   }
   var normCache = null;
+
+  /* ---------- ÔN LÝ THUYẾT: mẹo nhớ và ví dụ trực quan ---------- */
+  function theoryPage() {
+    stopTimer(); S = null;
+    var all = window.THEORY || [];
+    var chapter = 0;
+    var query = h('input', { class: 'search', type: 'search',
+      placeholder: 'Tìm khái niệm, mẹo nhớ hoặc ví dụ...', 'aria-label': 'Tìm lý thuyết' });
+    var tabs = h('div', { class: 'actions theory-tabs' });
+    var results = h('div', { class: 'stack theory-list' });
+    function render() {
+      results.replaceChildren();
+      var key = normalize(query.value.trim());
+      var found = all.filter(function (item) {
+        return (!chapter || item.ch === chapter) &&
+          (!key || normalize(item.title + ' ' + item.summary + ' ' + item.tip + ' ' + item.example + ' ' + item.trap + ' ' + item.keywords).indexOf(key) >= 0);
+      });
+      results.appendChild(h('p', { class: 'muted small' },
+        'Có ' + found.length + ' chủ đề phù hợp. Nội dung cô đọng theo các khái niệm thường xuất hiện trong ngân hàng 600 câu.'));
+      found.forEach(function (item) {
+        results.appendChild(h('article', { class: 'card theory-card' },
+          h('div', { class: 'eyebrow' }, 'CHƯƠNG ' + item.ch),
+          h('h3', null, item.title),
+          h('p', null, item.summary),
+          h('div', { class: 'theory-block tip' }, h('strong', null, '🧠 Mẹo dễ nhớ'), h('p', null, item.tip)),
+          h('div', { class: 'theory-block example' }, h('strong', null, '💡 Ví dụ trực quan'), h('p', null, item.example)),
+          h('div', { class: 'theory-block trap' }, h('strong', null, '⚠️ Dễ nhầm'), h('p', null, item.trap)),
+          h('div', { class: 'meta small' }, 'Từ khóa: ' + item.keywords)));
+      });
+      if (!found.length) results.appendChild(h('div', { class: 'card' }, 'Không tìm thấy chủ đề. Thử từ khóa ngắn hơn hoặc chọn chương khác.'));
+    }
+    [0,1,2,3].forEach(function (ch) {
+      var b = h('button', { class: 'btn ' + (chapter === ch ? 'primary' : 'ghost'), type: 'button',
+        onclick: function () { chapter = ch; Array.prototype.forEach.call(tabs.children, function (el) {
+          el.classList.toggle('primary', el.dataset.chapter === String(ch));
+          el.classList.toggle('ghost', el.dataset.chapter !== String(ch));
+        }); render(); } }, ch ? 'Chương ' + ch : 'Tất cả');
+      b.dataset.chapter = String(ch);
+      tabs.appendChild(b);
+    });
+    query.addEventListener('input', render);
+    mount(h('div', { class: 'stack' },
+      h('div', { class: 'card theory-intro' },
+        h('div', { class: 'eyebrow' }, 'HỌC HIỂU · NHỚ LÂU · VẬN DỤNG'),
+        h('h1', null, 'Ôn lý thuyết Triết học Mác – Lênin'),
+        h('p', null, 'Mỗi chủ đề gồm ý cốt lõi, mẹo nhớ nhanh, ví dụ đời sống/kỹ thuật và điểm dễ nhầm khi làm trắc nghiệm. Đây là tài liệu ôn tập tóm lược, không thay thế giáo trình chính thức.')),
+      h('div', { class: 'row theory-search' }, query),
+      tabs, results));
+    render();
+  }
+
   function browse() {
     stopTimer(); S = null;
     if (!normCache) {
@@ -1333,6 +1384,7 @@
   document.getElementById('navHome').addEventListener('click', home);
   document.getElementById('brand').addEventListener('click', function (e) { e.preventDefault(); home(); });
   document.getElementById('navBrowse').addEventListener('click', browse);
+  document.getElementById('navTheory').addEventListener('click', theoryPage);
   document.getElementById('navWrong').addEventListener('click', function () { reviewPage('wrong'); });
   document.getElementById('navStats').addEventListener('click', statsPage);
   document.getElementById('navGame').addEventListener('click', gameMenu);

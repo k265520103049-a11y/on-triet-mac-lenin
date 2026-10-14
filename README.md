@@ -4,6 +4,7 @@
 Web ôn trắc nghiệm tĩnh (HTML + CSS + JavaScript thuần), không cần cài đặt hay máy chủ.
 
 ## Tính năng
+- **Ôn lý thuyết**: mục riêng theo 3 chương, có tóm tắt ý cốt lõi, mẹo ghi nhớ, ví dụ trực quan và phần cảnh báo các điểm dễ nhầm; hỗ trợ tìm kiếm và lọc chương.
 - Chia 3 chương, mỗi chương chọn cả chương hoặc từng mục nhỏ.
 - **Ôn chương**: làm từng câu, có đáp án ngay. Chọn sai sẽ hiện nút **Làm lại từ đầu**, xáo ngẫu nhiên thứ tự câu (và thứ tự đáp án).
 - **Ôn tổng hợp**: 40 câu ngẫu nhiên từ 600 câu, có đồng hồ, bảng chọn câu, nộp bài, điểm thang 10 và xem lại bài.
@@ -47,3 +48,7 @@ Chạy thử trên máy: mở `index.html` bằng trình duyệt là được.
 ## Lưu ý
 File đề gốc không kèm đáp án, nên đáp án trong `questions.js` được lập theo giáo trình Triết học Mác - Lênin. Giảng viên nên rà lại, nhất là các câu có nhiều đáp án gần giống nhau.
 \n\n## Bản chuẩn Gameshow\n\nBản này thay các minigame ngắn bằng ba chế độ gameshow gắn với ngân hàng câu hỏi Triết học Mác – Lênin. Điểm số và kỷ lục được lưu cục bộ trên trình duyệt; dữ liệu không tự đồng bộ giữa các thiết bị. Khi triển khai, hãy rà soát đáp án theo giáo trình trước khi dùng làm đáp án chuẩn để chấm.\n
+
+
+## Ghi chú về tài liệu lý thuyết
+Phần ôn lý thuyết là bản tóm lược hỗ trợ ghi nhớ được xây dựng theo các chủ đề trong ngân hàng câu hỏi PDF được cung cấp. Khi ôn thi, hãy đối chiếu thuật ngữ và cách diễn đạt với giáo trình/giảng viên; các mẹo nhớ không thay thế định nghĩa đầy đủ trong giáo trình.
