@@ -25,16 +25,79 @@
     </nav>
   </header>
 
-  <main id="app" class="container" aria-live="polite"></main>
+  <main id="app" class="container" aria-live="polite">
+    <section class="card boot-card" role="status">Đang tải nội dung ôn tập…</section>
+  </main>
 
   <footer class="footer">
     Ngân hàng câu hỏi: học phần Triết học Mác - Lênin (BAS 123), 600 câu.
     Đáp án do người làm web tự lập, hãy đối chiếu với giáo trình khi nghi ngờ.
   </footer>
 
+
+
+  <!-- Hộp ủng hộ tùy chọn, chỉ hiển thị một lần trên mỗi trình duyệt -->
+  <div class="support-overlay" id="supportOverlay" hidden>
+    <section class="support-dialog" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
+      <button class="support-close" id="supportClose" type="button" aria-label="Đóng">×</button>
+      <div class="support-kicker">LỜI NHẮN NHỎ</div>
+      <h2 id="supportTitle">Bạn thấy website hữu ích?</h2>
+      <p>Nếu website giúp ích cho việc học của bạn, bạn có thể ủng hộ mình một ly cà phê. Đây hoàn toàn là tùy chọn — bạn vẫn có thể sử dụng website miễn phí như bình thường.</p>
+      <div class="support-bank">
+        <span>MB Bank · Số tài khoản</span>
+        <strong id="supportAccount">400172008</strong>
+        <button class="btn primary" id="supportCopy" type="button">Sao chép số tài khoản</button>
+        <span class="support-copy-status" id="supportCopyStatus" aria-live="polite"></span>
+      </div>
+      <button class="btn ghost support-later" id="supportLater" type="button">Để mình học tiếp đã</button>
+      <p class="support-note">Cảm ơn bạn đã ghé thăm và học tập cùng website 💚</p>
+    </section>
+  </div>
+
   <script src="questions.js"></script>
   <script src="theory.js"></script>
   <script src="explain.js"></script>
   <script src="app.js"></script>
+
+  <script>
+    (function () {
+      var overlay = document.getElementById('supportOverlay');
+      if (!overlay) return;
+      var dismissedKey = 'mln-support-note-dismissed-v1';
+      function closeSupport() {
+        overlay.hidden = true;
+        try { localStorage.setItem(dismissedKey, '1'); } catch (e) {}
+      }
+      document.getElementById('supportClose').addEventListener('click', closeSupport);
+      document.getElementById('supportLater').addEventListener('click', closeSupport);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeSupport();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !overlay.hidden) closeSupport();
+      });
+      document.getElementById('supportCopy').addEventListener('click', function () {
+        var account = '400172008';
+        var status = document.getElementById('supportCopyStatus');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(account).then(function () {
+            status.textContent = 'Đã sao chép số tài khoản.';
+          }).catch(function () {
+            status.textContent = 'Bạn hãy sao chép thủ công: 400172008';
+          });
+        } else {
+          status.textContent = 'Bạn hãy sao chép thủ công: 400172008';
+        }
+      });
+      try {
+        if (!localStorage.getItem(dismissedKey)) {
+          window.setTimeout(function () { overlay.hidden = false; }, 700);
+        }
+      } catch (e) {
+        window.setTimeout(function () { overlay.hidden = false; }, 700);
+      }
+    })();
+  </script>
+
 </body>
 </html>
