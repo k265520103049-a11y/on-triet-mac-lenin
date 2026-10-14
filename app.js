@@ -243,6 +243,38 @@
   var timer = null;
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
+  /* ---------- Cài đặt ---------- */
+  function openSettings() {
+    stopTimer();
+    var themeSelect = h('select', { class: 'search', id: 'settingsTheme', onchange: function (e) {
+      store.settings.theme = e.target.value;
+      save();
+      applyTheme();
+    } },
+      h('option', { value: 'light' }, 'Sáng'),
+      h('option', { value: 'dark' }, 'Tối'),
+      h('option', { value: 'auto' }, 'Theo thiết bị'));
+    themeSelect.value = store.settings.theme || 'auto';
+    var shuffleCheck = h('input', { type: 'checkbox', id: 'settingsShuffle', checked: store.settings.shuffleOpts ? true : null, onchange: function (e) {
+      store.settings.shuffleOpts = e.target.checked;
+      save();
+    } });
+    mount(h('div', { class: 'stack' },
+      h('div', { class: 'hud' }, h('h1', null, '⚙️ Cài đặt'), h('button', { class: 'btn ghost', onclick: home }, '← Quay lại')),
+      h('section', { class: 'card settings-card' },
+        h('h2', null, 'Giao diện'),
+        h('p', { class: 'muted' }, 'Chọn giao diện sáng, tối hoặc tự động theo thiết bị. Lựa chọn được lưu trên trình duyệt này.'),
+        h('label', { class: 'settings-row', for: 'settingsTheme' }, h('span', null, 'Chế độ hiển thị'), themeSelect),
+        h('div', { class: 'theme-preview-row' },
+          h('button', { class: 'btn', onclick: function () { store.settings.theme = 'light'; save(); applyTheme(); themeSelect.value = 'light'; } }, '☀️ Sáng'),
+          h('button', { class: 'btn', onclick: function () { store.settings.theme = 'dark'; save(); applyTheme(); themeSelect.value = 'dark'; } }, '🌙 Tối'),
+          h('button', { class: 'btn', onclick: function () { store.settings.theme = 'auto'; save(); applyTheme(); themeSelect.value = 'auto'; } }, '💻 Theo thiết bị'))),
+      h('section', { class: 'card settings-card' },
+        h('h2', null, 'Cách làm bài'),
+        h('label', { class: 'settings-row settings-check' }, shuffleCheck, h('span', null, h('b', null, 'Đảo thứ tự đáp án'), h('small', { class: 'muted' }, 'Mỗi lần làm bài, thứ tự các lựa chọn có thể thay đổi.')))),
+      h('div', { class: 'actions' }, h('button', { class: 'btn primary', onclick: home }, 'Hoàn tất'))));
+  }
+
   /* ---------- Trang chủ ---------- */
   function home() {
     stopTimer(); S = null;
@@ -279,10 +311,10 @@
     var fun = h('section', { class: 'card wide' },
       h('div', { class: 'eyebrow' }, 'ĐẤU TRƯỜNG GAMESHOW TRUYỀN HÌNH'),
       h('h3', null, 'Thách thức tri thức - Chinh phục đỉnh cao'),
-      h('div', { class: 'meta' }, 'Hệ thống Gameshow truyền hình: Ai là triệu phú, Rung chuông vàng & Đường lên đỉnh Olympia.'),
+      h('div', { class: 'meta' }, 'Bốn gameshow: Ai là triệu phú, Đường lên đỉnh Olympia, Chiếc nón kỳ diệu và Jeopardy.'),
       h('div', { class: 'actions' },
         h('button', { class: 'btn primary', onclick: function () { startMillionaire(); } }, '🏆 Ai là triệu phú'),
-        h('button', { class: 'btn primary', onclick: function () { startGoldenBell(); } }, '🔔 Rung chuông vàng'),
+        h('button', { class: 'btn primary', onclick: function () { gameMenu(); } }, '📺 Chọn gameshow'),
         h('button', { class: 'btn primary', onclick: function () { startOlympia(); } }, '🏔️ Đỉnh Olympia')));
     var pend = pendingList();
     mount(h('div', { class: 'stack' },
