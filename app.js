@@ -761,7 +761,7 @@
         h('span', { class: 'toptxt' }, q.q),
         h('span', { class: 'bad-t small' }, 'sai ' + store.wrong[id] + ' lần'));
     });
-    var mx = stat('mix'), mil = stat('millionaire'), gb = stat('goldenbell'), oly = stat('olympia');
+    var mx = stat('mix'), mil = stat('millionaire'), oly = stat('olympia'), wheel = stat('wheel'), jeopardy = stat('jeopardy');
     mount(h('div', { class: 'stack' },
       h('h1', null, 'Thống kê'),
       h('div', { class: 'card stack' },
@@ -769,8 +769,8 @@
         h('div', { class: 'muted small' },
           'Đang có ' + wrongIds().length + ' câu sai · ' + markIds().length + ' câu đã đánh dấu · ' +
           'Triệu phú: kỷ lục ' + (mil.best ? mil.best.toLocaleString() + ' đ' : 'Chưa chơi') + ' · ' +
-          'Rung Chuông Vàng: kỷ lục câu ' + gb.best + ' · ' +
-          'Olympia: kỷ lục ' + oly.best + ' điểm')),
+          'Olympia: kỷ lục ' + oly.best + ' điểm · ' +
+          'Chiếc Nón: kỷ lục ' + wheel.best + ' điểm · Jeopardy: kỷ lục ' + jeopardy.best + ' điểm')),
       blocks,
       h('div', { class: 'card stack' },
         h('h3', null, 'Câu hay sai nhất'),
@@ -783,18 +783,20 @@
 
   function gameMenu() {
     stopTimer(); S = null;
-    var mil = stat('millionaire'), gb = stat('goldenbell'), oly = stat('olympia');
+    var mil = stat('millionaire'), oly = stat('olympia'), wheel = stat('wheel'), jeopardy = stat('jeopardy');
     mount(h('div', { class: 'stack' },
       h('button', { class: 'btn ghost', onclick: home }, '← Trang chủ'),
       h('h1', null, '📺 Đấu Trường Gameshow Triết Học'),
-      h('p', { class: 'muted' }, 'Các Gameshow truyền hình quen thuộc được tái hiện để thử thách bản lĩnh tri thức của bạn.'),
-      h('div', { class: 'grid' },
-        gameCard('🏆 Ai Là Triệu Phú Triết Học', 'Chinh phục 15 câu hỏi với thang điểm thưởng lớn. Tận dụng 3 quyền trợ giúp: 50:50, Hỏi khán giả & Chuyên gia C.Mác.',
-          mil.best ? 'Kỷ lục: ' + mil.best.toLocaleString() + ' VNĐ · Đã chơi ' + mil.runs + ' lần' : 'Chưa chơi', function () { startMillionaire(); }),
-        gameCard('🔔 Rung Chuông Vàng Triết Học', 'Vượt qua 20 câu hỏi thử thách kịch tính để trở thành nhà vô địch Rung Chuông Vàng. Có Thẻ Cứu Trợ từ Giảng Viên!',
-          gb.best ? 'Kỷ lục: Cán mốc câu ' + gb.best + ' · Đã chơi ' + gb.runs + ' lần' : 'Chưa chơi', function () { startGoldenBell(); }),
-        gameCard('🏔️ Đường Lên Đỉnh Olympia', '10 câu hỏi với thời gian 15s/câu. Tận dụng Ngôi Sao Hy Vọng để x2 số điểm!',
-          oly.best ? 'Kỷ lục: ' + oly.best + ' điểm · Đã chơi ' + oly.runs + ' lần' : 'Chưa chơi', function () { startOlympia(); }))));
+      h('p', { class: 'muted' }, 'Bốn gameshow với cách chơi khác nhau: chinh phục tiền thưởng, bốn vòng Olympia, vòng quay điểm thưởng/phạt và bảng câu hỏi Jeopardy.'),
+      h('div', { class: 'grid game-grid' },
+        gameCard('🏆 Ai Là Triệu Phú', '15 câu hỏi tăng dần độ khó, thang tiền thưởng và 3 quyền trợ giúp.',
+          mil.best ? 'Kỷ lục: ' + mil.best.toLocaleString() + ' VNĐ · ' + mil.runs + ' lượt' : 'Chưa chơi', startMillionaire),
+        gameCard('🏔️ Đường Lên Đỉnh Olympia', 'Đủ 4 phần: Khởi động, Vượt chướng ngại vật, Tăng tốc biến tấu và Về đích.',
+          oly.best ? 'Kỷ lục: ' + oly.best + ' điểm · ' + oly.runs + ' lượt' : 'Chưa chơi', startOlympia),
+        gameCard('🎡 Chiếc Nón Kỳ Diệu', 'Quay vòng để nhận điểm thưởng, điểm phạt hoặc lượt thêm rồi trả lời câu hỏi ngẫu nhiên.',
+          wheel.best ? 'Kỷ lục: ' + wheel.best + ' điểm · ' + wheel.runs + ' lượt' : 'Chưa chơi', startWheel),
+        gameCard('🟦 Jeopardy Triết Học', 'Chọn ô điểm trên bảng chủ đề. Trả lời đúng cộng điểm, sai bị trừ điểm.',
+          jeopardy.best ? 'Kỷ lục: ' + jeopardy.best + ' điểm · ' + jeopardy.runs + ' lượt' : 'Chưa chơi', startJeopardy))));
   }
 
   function gameCard(title, desc, meta, fn) {
@@ -1040,345 +1042,192 @@
   }
 
   /* --------------------------------------------------------------------------
-   * GAMESHOW 2: RUNG CHUÔNG VÀNG TRIẾT HỌC
-   * -------------------------------------------------------------------------- */
-  function startGoldenBell() {
-    stopTimer();
-    var pool = shuffle(Q).slice(0, 20);
-    S = {
-      view: 'goldenbell',
-      items: pool.map(makeItem),
-      level: 0,
-      teacherHelp: true,
-      usedHelp: false,
-      locked: false
-    };
-    renderGoldenBell();
-  }
-
-  function renderGoldenBell() {
-    var it = S.items[S.level];
-    var cp = correctPos(it);
-
-    var opts = [0, 1, 2, 3].map(function (k) {
-      var state = '';
-      if (S.locked) {
-        if (k === cp) state = 'correct locked';
-        else if (k === it.picked) state = 'wrong locked';
-        else state = 'dim locked';
-      }
-      return optionButton(it, k, state, function () { pickGoldenBell(k); });
-    });
-
-    mount(h('div', { class: 'stack' },
-      h('div', { class: 'hud' },
-        h('b', null, '🔔 RUNG CHUÔNG VÀNG TRIẾT HỌC'),
-        h('div', { class: 'stats' },
-          h('span', null, 'Sàn thi đấu câu: ', h('b', null, (S.level + 1) + '/20')),
-          h('span', { class: S.teacherHelp ? 'ok-t' : 'muted' }, '🎓 Cứu trợ Giảng viên: ', h('b', null, S.teacherHelp ? 'Sẵn sàng' : 'Đã dùng'))),
-        h('button', { class: 'btn ghost', onclick: gameMenu }, 'Thoát')),
-
-      h('div', { class: 'progress' }, h('span', { style: 'width:' + Math.round((S.level) / 20 * 100) + '%' })),
-
-      h('div', { class: 'card qcard' },
-        qHeader(it, 'Chặng đường Rung Chuông Vàng'),
-        h('div', { class: 'qtext' }, it.q.q),
-        h('div', { class: 'opts' }, opts)
-      )
-    ));
-  }
-
-  function pickGoldenBell(k) {
-    if (S.locked) return;
-    var it = S.items[S.level];
-    it.picked = k;
-    S.locked = true;
-    var ok = it.order[k] === it.q.a;
-    record(it.q, ok);
-    save();
-    renderGoldenBell();
-
-    setTimeout(function () {
-      if (ok) {
-        if (S.level + 1 >= 20) {
-          finishGoldenBell(true);
-        } else {
-          S.level++;
-          S.locked = false;
-          renderGoldenBell();
-        }
-      } else {
-        if (S.teacherHelp) {
-          promptTeacherHelp();
-        } else {
-          finishGoldenBell(false);
-        }
-      }
-    }, 1500);
-  }
-
-  function promptTeacherHelp() {
-    var dlg = h('dialog', null);
-    dlg.append(
-      h('h2', null, '🎓 CỨU TRỢ TỪ GIẢNG VIÊN!'),
-      h('p', null, 'Rất tiếc! Bạn vừa chọn đáp án chưa chính xác. Bạn có muốn dùng "Thẻ Cứu Trợ Của Giảng Viên" để vượt qua câu hỏi này và tiếp tục thi đấu không?'),
-      h('div', { class: 'row', style: 'justify-content:flex-end; gap:10px; margin-top:16px;' },
-        h('button', {
-          class: 'btn primary',
-          onclick: function () {
-            S.teacherHelp = false;
-            S.usedHelp = true;
-            dlg.close();
-            toast('Giảng viên đã cứu trợ thành công!');
-            if (S.level + 1 >= 20) {
-              finishGoldenBell(true);
-            } else {
-              S.level++;
-              S.locked = false;
-              renderGoldenBell();
-            }
-          }
-        }, 'Sử dụng Cứu Trợ'),
-        h('button', {
-          class: 'btn',
-          onclick: function () {
-            dlg.close();
-            finishGoldenBell(false);
-          }
-        }, 'Chấp nhận rời sàn đấu')
-      )
-    );
-    document.body.appendChild(dlg);
-    dlg.showModal();
-  }
-
-  function finishGoldenBell(win) {
-    stopTimer();
-    var st = stat('goldenbell');
-    st.runs++;
-    var reached = win ? 20 : S.level;
-    if (reached > st.best) st.best = reached;
-    save();
-
-    mount(h('div', { class: 'stack' },
-      h('div', { class: 'card score' },
-        h('div', { class: 'muted' }, 'KẾT QUẢ RUNG CHUÔNG VÀNG'),
-        h('div', { class: 'big' }, win ? '🔔 BẠN ĐÃ RUNG CHUÔNG VÀNG!' : 'DỪNG CHÂN Ở CÂU ' + (S.level + 1)),
-        h('p', null, win ? 'Chúc mừng bạn đã xuất sắc vượt qua cả 20 câu hỏi triết học kịch tính!' : 'Bạn đã chinh phục được ' + S.level + '/20 câu hỏi.'),
-        h('div', { class: 'row', style: 'justify-content:center; margin-top:16px;' },
-          h('button', { class: 'btn primary', onclick: startGoldenBell }, '↻ Thi đấu lại'),
-          h('button', { class: 'btn', onclick: gameMenu }, 'Gameshow khác'),
-          h('button', { class: 'btn', onclick: home }, 'Trang chủ'))
-      )
-    ));
-  }
-
-  /* --------------------------------------------------------------------------
-   * GAMESHOW 3: ĐƯỜNG LÊN ĐỈNH OLYMPIA
+   * GAMESHOW 2: ĐƯỜNG LÊN ĐỈNH OLYMPIA - ĐỦ 4 VÒNG
    * -------------------------------------------------------------------------- */
   function startOlympia() {
     stopTimer();
-    var pool = shuffle(Q).slice(0, 10);
-    S = {
-      view: 'olympia',
-      items: pool.map(makeItem),
-      level: 0,
-      score: 0,
-      starUsed: false,
-      starActive: false,
-      timeLeft: 15,
-      locked: false
-    };
-    runOlympiaTimer();
-    renderOlympia();
+    var pool = shuffle(Q).slice(0, 14).map(makeItem);
+    S = { view: 'olympia', items: pool, round: 0, idx: 0, score: 0, locked: false,
+      round1: pool.slice(0, 6), obstacle: pool[6], round3: pool.slice(7, 11), round4: pool.slice(11, 14),
+      obstacleSolved: false, obstacleHints: 0, timeLeft: 15, finalStake: 20, starUsed: false, starActive: false };
+    renderOlympiaRound();
   }
 
-  function runOlympiaTimer() {
+  function olympiaRoundTitle() {
+    return ['Vòng 1 · Khởi động', 'Vòng 2 · Vượt chướng ngại vật', 'Vòng 3 · Tăng tốc', 'Vòng 4 · Về đích'][S.round];
+  }
+
+  function renderOlympiaRound() {
     stopTimer();
-    timer = setInterval(function () {
+    if (S.round === 0) return renderOlympiaQuestionRound(S.round1, 'Khởi động', 10, 15, 'Mỗi câu đúng được 10 điểm. Trả lời nhanh trong 15 giây.');
+    if (S.round === 1) return renderOlympiaObstacle();
+    if (S.round === 2) return renderOlympiaQuestionRound(S.round3, 'Tăng tốc', null, 10, 'Vòng biến tấu: điểm tính theo tốc độ — đúng trong 3 giây được 30 điểm, 6 giây được 20 điểm, sau đó được 10 điểm.');
+    if (S.round === 3) return renderOlympiaFinishRound();
+    finishOlympia();
+  }
+
+  function renderOlympiaQuestionRound(items, title, base, seconds, description) {
+    var it = items[S.idx];
+    if (!it) { S.round++; S.idx = 0; renderOlympiaRound(); return; }
+    var cp = correctPos(it);
+    var opts = [0,1,2,3].map(function(k) {
+      var state = '';
+      if (S.locked) state = k === cp ? 'correct locked' : (k === it.picked ? 'wrong locked' : 'dim locked');
+      return optionButton(it, k, state, function(){ pickOlympiaRound(k, title, base, seconds); });
+    });
+    mount(h('div', { class: 'stack olympia-game' },
+      h('div', { class: 'hud' }, h('b', null, '🏔️ ĐƯỜNG LÊN ĐỈNH OLYMPIA'),
+        h('div', { class: 'stats' }, h('span', null, 'Điểm: ', h('b', null, S.score)), h('span', null, 'Vòng ', h('b', null, (S.round+1)+'/4'))),
+        h('button', { class: 'btn ghost', onclick: gameMenu }, 'Thoát')),
+      olympiaProgress(),
+      h('div', { class: 'card qcard' },
+        h('div', { class: 'eyebrow' }, title.toUpperCase()),
+        h('h2', null, title + ' · Câu ' + (S.idx+1) + '/' + items.length),
+        h('p', { class: 'muted' }, description),
+        h('div', { class: 'hud' }, qHeader(it, title), seconds ? h('span', { class: 'chip' }, '⏱ ' + S.timeLeft + ' giây') : null),
+        h('div', { class: 'qtext' }, it.q.q), h('div', { class: 'opts' }, opts))));
+    if (seconds) runOlympiaRoundTimer(title, base, seconds);
+  }
+
+  function olympiaProgress() {
+    return h('div', { class: 'olympia-rounds' }, ['Khởi động','Vượt chướng ngại vật','Tăng tốc','Về đích'].map(function(t,i){
+      return h('div', { class: 'olympia-round' + (i===S.round?' active':'') + (i<S.round?' done':'') }, h('b', null, (i+1)+'. '), t);
+    }));
+  }
+
+  function runOlympiaRoundTimer(title, base, seconds) {
+    stopTimer();
+    timer = setInterval(function(){
       if (!S || S.view !== 'olympia' || S.locked) return;
       S.timeLeft--;
-      var el = document.getElementById('olyTimer');
-      if (el) el.textContent = S.timeLeft + 's';
+      var nodes = document.querySelectorAll('.chip');
+      if (nodes.length) { var last = nodes[nodes.length-1]; if (last.textContent.indexOf('giây')>=0) last.textContent = '⏱ ' + S.timeLeft + ' giây'; }
+      if (S.timeLeft <= 0) pickOlympiaRound(-1, title, base, seconds);
+    },1000);
+  }
 
-      if (S.timeLeft <= 0) {
-        pickOlympia(-1); // Hết giờ
-      }
+  function pickOlympiaRound(k, title, base, seconds) {
+    if (S.locked) return;
+    stopTimer(); S.locked = true;
+    var items = S.round===0 ? S.round1 : S.round3;
+    var it = items[S.idx]; it.picked = k;
+    var ok = k >= 0 && it.order[k] === it.q.a;
+    var earned = 0;
+    if (ok) {
+      if (title === 'Tăng tốc') earned = S.timeLeft >= 7 ? 30 : (S.timeLeft >= 4 ? 20 : 10);
+      else earned = base || 10;
+      S.score += earned; record(it.q,true);
+    } else if (k >= 0) record(it.q,false);
+    save(); renderOlympiaQuestionRound(items, title, base, seconds, title === 'Tăng tốc' ? 'Tăng tốc: điểm theo thời gian còn lại.' : 'Kết quả: ' + (ok ? 'đúng, +' + earned + ' điểm.' : 'chưa đúng, không có điểm.'));
+    setTimeout(function(){
+      if (!S || S.view!=='olympia') return;
+      S.idx++;
+      if (S.idx >= items.length) { S.round++; S.idx=0; }
+      S.locked=false; S.timeLeft=seconds || 10; renderOlympiaRound();
     }, 1000);
   }
 
-  function renderOlympia() {
-    var it = S.items[S.level];
-    var cp = correctPos(it);
-    var baseVal = (it.q.lv <= 2 ? 10 : (it.q.lv <= 4 ? 20 : 30));
-
-    var btnStar = h('button', {
-      class: 'btn' + (S.starActive ? ' primary' : '') + (S.starUsed && !S.starActive ? ' used' : ''),
-      disabled: S.starUsed || S.locked ? true : null,
-      onclick: function () {
-        S.starActive = !S.starActive;
-        renderOlympia();
-      }
-    }, S.starActive ? '🌟 Đã bật Ngôi sao hy vọng (X2)' : '🌟 Ngôi sao hy vọng');
-
-    var opts = [0, 1, 2, 3].map(function (k) {
+  function renderOlympiaObstacle() {
+    var it = S.obstacle;
+    var answer = it.q.o[it.q.a];
+    var hints = [
+      'Gợi ý 1: Đáp án thuộc nội dung Triết học Mác – Lênin.',
+      'Gợi ý 2: Đọc kỹ câu hỏi gốc; chú ý khái niệm trọng tâm và mối quan hệ được hỏi.',
+      'Gợi ý 3: Đáp án có ' + answer.length + ' ký tự (tính cả khoảng trắng).'
+    ];
+    var opts = [0,1,2,3].map(function(k){
       var state = '';
-      if (S.locked) {
-        if (k === cp) state = 'correct locked';
-        else if (k === it.picked) state = 'wrong locked';
-        else state = 'dim locked';
-      }
-      return optionButton(it, k, state, function () { pickOlympia(k); });
+      if (S.locked) state = k===correctPos(it) ? 'correct locked' : (k===it.picked?'wrong locked':'dim locked');
+      return optionButton(it,k,state,function(){
+        if (S.locked) return;
+        S.locked=true; it.picked=k; var ok=it.order[k]===it.q.a;
+        if(ok){S.score+=40;S.obstacleSolved=true;record(it.q,true);} else {S.score=Math.max(0,S.score-10);record(it.q,false);}
+        save(); renderOlympiaObstacleResult(ok);
+      });
     });
-
-    mount(h('div', { class: 'stack' },
-      h('div', { class: 'hud' },
-        h('b', null, '🏔️ ĐƯỜNG LÊN ĐỈNH OLYMPIA'),
-        h('div', { class: 'stats' },
-          h('span', null, 'Câu ', h('b', null, (S.level + 1) + '/10')),
-          h('span', null, '⏱ ', h('b', { id: 'olyTimer' }, S.timeLeft + 's')),
-          h('span', { class: 'ok-t' }, 'Điểm số: ', h('b', null, S.score))),
-        h('button', { class: 'btn ghost', onclick: gameMenu }, 'Thoát')),
-
-      h('div', { class: 'card qcard' },
-        qHeader(it, 'Giá trị: ' + baseVal + ' điểm'),
-        h('div', { class: 'qtext' }, it.q.q),
-        h('div', { class: 'row', style: 'margin-bottom:12px;' }, btnStar),
-        h('div', { class: 'opts' }, opts)
-      )
-    ));
+    mount(h('div',{class:'stack olympia-game'},
+      h('div',{class:'hud'},h('b',null,'🏔️ ĐƯỜNG LÊN ĐỈNH OLYMPIA'),h('span',{class:'chip'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),
+      olympiaProgress(),
+      h('div',{class:'card qcard'},h('div',{class:'eyebrow'},'VÒNG 2 · VƯỢT CHƯỚNG NGẠI VẬT'),
+        h('h2',null,'Giải mã chướng ngại vật'),
+        h('p',{class:'muted'},'Trả lời câu hỏi để mở khóa chướng ngại vật. Đúng +40 điểm; sai -10 điểm. Bạn có thể mở từng gợi ý.'),
+        h('div',{class:'qtext'},it.q.q),
+        h('div',{class:'row'},h('button',{class:'btn',disabled:S.obstacleHints>=3?true:null,onclick:function(){S.obstacleHints++;toast(hints[S.obstacleHints-1]);}},'💡 Mở gợi ý ('+S.obstacleHints+'/3)'),h('span',{class:'chip'},'Chương '+it.q.ch)),
+        h('div',{class:'opts'},opts),S.locked?h('div',{class:'feedback '+(S.obstacleSolved?'ok':'bad')},S.obstacleSolved?'Mở khóa thành công! +40 điểm.':'Chướng ngại vật vẫn còn. -10 điểm.'):null,
+        S.locked?h('button',{class:'btn primary',onclick:function(){S.round=2;S.idx=0;S.locked=false;S.timeLeft=10;renderOlympiaRound();}},'Sang vòng Tăng tốc →'):null)));
   }
+  function renderOlympiaObstacleResult() { renderOlympiaObstacle(); }
 
-  function pickOlympia(k) {
-    if (S.locked) return;
-    S.locked = true;
-    var it = S.items[S.level];
-    it.picked = k;
-    var baseVal = (it.q.lv <= 2 ? 10 : (it.q.lv <= 4 ? 20 : 30));
-    var ok = k >= 0 && it.order[k] === it.q.a;
-
-    if (S.starActive) {
-      S.starUsed = true;
-    }
-
-    if (ok) {
-      S.score += S.starActive ? baseVal * 2 : baseVal;
-      record(it.q, true);
-    } else {
-      if (S.starActive) S.score -= baseVal;
-      if (k >= 0) record(it.q, false);
-    }
-    save();
-    renderOlympia();
-
-    setTimeout(function () {
-      if (S.level + 1 >= 10) {
-        finishOlympia();
-      } else {
-        S.level++;
-        S.timeLeft = 15;
-        S.starActive = false;
-        S.locked = false;
-        renderOlympia();
-      }
-    }, 1500);
+  function renderOlympiaFinishRound() {
+    var items=S.round4, it=items[S.idx];
+    if(!it){finishOlympia();return;}
+    var cp=correctPos(it);
+    var opts=[0,1,2,3].map(function(k){var state='';if(S.locked)state=k===cp?'correct locked':(k===it.picked?'wrong locked':'dim locked');return optionButton(it,k,state,function(){pickOlympiaFinish(k);});});
+    var stakeBtns=[20,30].map(function(n){return h('button',{class:'btn'+(S.finalStake===n?' primary':''),disabled:S.locked?true:null,onclick:function(){S.finalStake=n;renderOlympiaFinishRound();}},n+' điểm');});
+    mount(h('div',{class:'stack olympia-game'},h('div',{class:'hud'},h('b',null,'🏔️ ĐƯỜNG LÊN ĐỈNH OLYMPIA'),h('span',{class:'stats'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),olympiaProgress(),
+      h('div',{class:'card qcard'},h('div',{class:'eyebrow'},'VÒNG 4 · VỀ ĐÍCH'),h('h2',null,'Câu '+(S.idx+1)+'/3'),h('p',{class:'muted'},'Chọn mức điểm cược trước khi trả lời. Đúng cộng điểm, sai trừ điểm cược.'),
+      h('div',{class:'row'},h('b',null,'Mức cược:'),stakeBtns),qHeader(it,'Cược '+S.finalStake+' điểm'),h('div',{class:'qtext'},it.q.q),h('div',{class:'opts'},opts),
+      h('button',{class:'btn'+(S.starUsed?' used':''),disabled:S.starUsed||S.locked?true:null,onclick:function(){S.starUsed=true;S.finalStake=30;toast('Ngôi sao hy vọng: câu này cược 30 điểm!');renderOlympiaFinishRound();}},'🌟 Ngôi sao hy vọng (cược 30 điểm)'))));
   }
-
+  function pickOlympiaFinish(k) {
+    if(S.locked)return;S.locked=true;var it=S.round4[S.idx];it.picked=k;var ok=k>=0&&it.order[k]===it.q.a;
+    if(ok){S.score+=S.finalStake;record(it.q,true);}else{S.score-=S.finalStake;if(k>=0)record(it.q,false);}
+    save();renderOlympiaFinishRound();setTimeout(function(){if(!S||S.view!=='olympia')return;S.idx++;S.locked=false;S.finalStake=20;if(S.idx>=S.round4.length)finishOlympia();else renderOlympiaFinishRound();},1200);
+  }
   function finishOlympia() {
-    stopTimer();
-    var st = stat('olympia');
-    st.runs++;
-    if (S.score > st.best) st.best = S.score;
-    save();
-
-    mount(h('div', { class: 'stack' },
-      h('div', { class: 'card score' },
-        h('div', { class: 'muted' }, 'KẾT QUẢ "ĐƯỜNG LÊN ĐỈNH OLYMPIA"'),
-        h('div', { class: 'big ok-t' }, S.score + ' ĐIỂM'),
-        h('p', null, 'Chúc mừng bạn đã hoàn thành chặng đua chinh phục Đỉnh núi Tri thức!'),
-        h('div', { class: 'row', style: 'justify-content:center; margin-top:16px;' },
-          h('button', { class: 'btn primary', onclick: startOlympia }, '↻ Leo núi lại'),
-          h('button', { class: 'btn', onclick: gameMenu }, 'Gameshow khác'),
-          h('button', { class: 'btn', onclick: home }, 'Trang chủ'))
-      )
-    ));
+    stopTimer(); var st=stat('olympia'); st.runs++; if(S.score>st.best)st.best=S.score; save();
+    mount(h('div',{class:'stack'},h('div',{class:'card score'},h('div',{class:'muted'},'KẾT QUẢ ĐƯỜNG LÊN ĐỈNH OLYMPIA'),h('div',{class:'big ok-t'},S.score+' ĐIỂM'),
+      h('p',null,'Bạn đã hoàn thành đủ 4 vòng: Khởi động, Vượt chướng ngại vật, Tăng tốc và Về đích.'),
+      h('div',{class:'row',style:'justify-content:center;margin-top:16px;'},h('button',{class:'btn primary',onclick:startOlympia},'↻ Thi đấu lại'),h('button',{class:'btn',onclick:gameMenu},'Gameshow khác'),h('button',{class:'btn',onclick:home},'Trang chủ')))));
   }
 
-  /* ---------- Sao lưu / khôi phục ---------- */
-  function exportData() {
-    var d = new Date();
-    var name = 'on-triet-tien-do-' + d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + '.json';
-    var url = URL.createObjectURL(new Blob([JSON.stringify(store)], { type: 'application/json' }));
-    var a = h('a', { href: url, download: name });
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    toast('Đã tải file sao lưu.');
+  /* --------------------------------------------------------------------------
+   * GAMESHOW 3: CHIẾC NÓN KỲ DIỆU
+   * -------------------------------------------------------------------------- */
+  var WHEEL_SLICES = [
+    {name:'Mất lượt',type:'lose'}, {name:'+100 điểm',type:'points',value:100},
+    {name:'Nhân đôi',type:'double'}, {name:'+200 điểm',type:'points',value:200},
+    {name:'Thêm lượt',type:'again'}, {name:'-100 điểm',type:'minus',value:100},
+    {name:'+300 điểm',type:'points',value:300}, {name:'Phần thưởng bí mật',type:'mystery'}
+  ];
+  function startWheel(){stopTimer();S={view:'wheel',score:0,round:0,used:[],current:null,spinning:false,turns:0,finished:false,bonusTurn:false};renderWheel();}
+  function renderWheel(){
+    var done=S.round>=8;
+    if(done && !S.finished){S.finished=true;var ws=stat('wheel');ws.runs++;if(S.score>ws.best)ws.best=S.score;save();}
+    var body=done?h('div',{class:'card score'},h('h2',null,'Kết thúc vòng quay!'),h('div',{class:'big'},S.score+' điểm'),h('button',{class:'btn primary',onclick:startWheel},'Chơi lại')):
+      h('div',{class:'card qcard stack'},h('div',{class:'wheel-wrap'},h('div',{class:'wheel-pointer'},'▼'),h('div',{class:'wheel-disc'+(S.spinning?' spinning':''),style:'--wheel-rotation:'+(S.turns*1440)+'deg'},WHEEL_SLICES.map(function(x,i){return h('span',{class:'wheel-label','style':'--slice:'+i},x.name);}))),
+      h('div',{class:'row between'},h('span',{class:'chip'},'Lượt '+(S.round+1)+'/8'),h('span',{class:'chip'},'Điểm: '+S.score)),
+      h('p',{class:'muted'},'Quay để nhận thử thách điểm số; sau đó trả lời câu hỏi Triết học để ghi điểm.'),
+      h('button',{class:'btn primary big',disabled:S.spinning?true:null,onclick:spinWheel},S.spinning?'Đang quay…':'🎡 QUAY NÓN'));
+    mount(h('div',{class:'stack'},h('div',{class:'hud'},h('b',null,'🎡 CHIẾC NÓN KỲ DIỆU'),h('span',{class:'chip'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),body));
   }
-  function importData(file, done) {
-    var fr = new FileReader();
-    fr.onload = function () {
-      try {
-        var raw = JSON.parse(fr.result);
-        if (!raw || typeof raw !== 'object' || (!raw.wrong && !raw.seen && !raw.stats)) throw new Error('bad');
-        if (!confirm('Thay toàn bộ tiến độ hiện tại bằng dữ liệu trong file sao lưu?')) return;
-        store = norm(raw); save(); done(); toast('Đã khôi phục tiến độ.');
-      } catch (e) { toast('File không hợp lệ.'); }
-    };
-    fr.readAsText(file);
-  }
+  function spinWheel(){if(S.spinning)return;S.spinning=true;S.turns++;renderWheel();setTimeout(function(){if(!S||S.view!=='wheel')return;S.spinning=false;var slice=WHEEL_SLICES[Math.floor(Math.random()*WHEEL_SLICES.length)];S.current=slice;
+    if(slice.type==='lose'){toast('Ô Mất lượt! Điểm không đổi.');S.round++;renderWheel();return;}
+    if(slice.type==='points')S.pending=slice.value;else if(slice.type==='minus')S.pending=-slice.value;else if(slice.type==='double')S.pending='double';else if(slice.type==='again'){S.pending=100;S.bonusTurn=true;}else S.pending=200;
+    var q=shuffle(Q.filter(function(x){return !S.used.includes(x.id);}))[0]||Q[Math.floor(Math.random()*Q.length)];S.used.push(q.id);S.item=makeItem(q);renderWheelQuestion();},900);}
+  function renderWheelQuestion(){var it=S.item;var cp=correctPos(it);var opts=[0,1,2,3].map(function(k){return optionButton(it,k,'',function(){answerWheel(k);});});
+    mount(h('div',{class:'stack'},h('div',{class:'hud'},h('b',null,'🎡 CHIẾC NÓN KỲ DIỆU'),h('span',{class:'chip'},'Ô trúng: '+S.current.name),h('span',{class:'chip'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),
+      h('div',{class:'card qcard'},h('div',{class:'eyebrow'},'THỬ THÁCH LƯỢT '+(S.round+1)),h('div',{class:'qtext'},it.q.q),h('div',{class:'opts'},opts))));}
+  function answerWheel(k){var it=S.item;var ok=it.order[k]===it.q.a;record(it.q,ok);if(ok){var delta=S.pending==='double'?200:S.pending;S.score+=delta;toast('Chính xác! '+(delta>=0?'+':'')+delta+' điểm.');}else{if(typeof S.pending==='number'&&S.pending<0)S.score+=S.pending;toast('Chưa chính xác!');}save();if(!(ok&&S.bonusTurn)){S.round++;}else{toast('Bạn nhận thêm một lượt quay!');}S.bonusTurn=false;renderWheel();}
 
-  /* ---------- Cài đặt ---------- */
-  function openSettings() {
-    var dlg = h('dialog', null);
-    var shuf = h('input', { type: 'checkbox', checked: store.settings.shuffleOpts ? true : null, onchange: function (e) { store.settings.shuffleOpts = e.target.checked; save(); } });
-    var theme = h('select', { class: 'search', onchange: function (e) { store.settings.theme = e.target.value; save(); applyTheme(); } },
-      h('option', { value: 'auto' }, 'Theo hệ thống'), h('option', { value: 'light' }, 'Sáng'), h('option', { value: 'dark' }, 'Tối'));
-    theme.value = store.settings.theme;
-    var fileIn = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: function (e) {
-      var f = e.target.files[0];
-      if (f) importData(f, function () { dlg.close(); home(); });
-    } });
-    dlg.append(
-      fileIn,
-      h('h2', null, 'Cài đặt'),
-      h('label', { class: 'switch-row' }, h('span', null, 'Xáo thứ tự đáp án A, B, C, D (câu "Tất cả đáp án..." giữ nguyên)'), shuf),
-      h('div', { class: 'switch-row' }, h('span', null, 'Giao diện'), theme),
-      h('div', { class: 'switch-row' }, h('span', null, 'Sao lưu tiến độ (tải file .json)'),
-        h('button', { class: 'btn', onclick: exportData }, 'Xuất')),
-      h('div', { class: 'switch-row' }, h('span', null, 'Khôi phục từ file sao lưu'),
-        h('button', { class: 'btn', onclick: function () { fileIn.click(); } }, 'Nhập')),
-      h('div', { class: 'switch-row' }, h('span', null, 'Xoá toàn bộ tiến độ & câu sai'),
-        h('button', { class: 'btn', onclick: function () {
-          if (confirm('Xoá toàn bộ tiến độ và danh sách câu sai trên trình duyệt này?')) {
-            var th = store.settings; store = defaults(); store.settings = th; save(); dlg.close(); home(); toast('Đã xoá tiến độ.');
-          }
-        } }, 'Xoá')),
-      h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:14px' },
-        h('button', { class: 'btn primary', onclick: function () { dlg.close(); } }, 'Đóng')));
-    dlg.addEventListener('close', function () { dlg.remove(); });
-    document.body.appendChild(dlg);
-    dlg.showModal();
+  /* --------------------------------------------------------------------------
+   * GAMESHOW 4: JEOPARDY TRIẾT HỌC
+   * -------------------------------------------------------------------------- */
+  var JEOPARDY_CATS=['Chương 1','Chương 2','Chương 3','Thử thách tổng hợp'];
+  function startJeopardy(){stopTimer();var board=[];JEOPARDY_CATS.forEach(function(cat,c){var pool=shuffle(Q.filter(function(q){return c===3||q.ch===c+1;}));for(var r=0;r<5;r++){var q=pool[r]||shuffle(Q)[0];board.push({cat:cat,value:(r+1)*100,item:makeItem(q),used:false});}});S={view:'jeopardy',board:board,score:0,current:null,answered:0,finished:false};renderJeopardy();}
+  function renderJeopardy(){
+    if(S.board.every(function(x){return x.used;}) && !S.finished){S.finished=true;var js=stat('jeopardy');js.runs++;if(S.score>js.best)js.best=S.score;save();}
+    if(S.current){var cell=S.current,it=cell.item,cp=correctPos(it);var opts=[0,1,2,3].map(function(k){var state='';if(cell.locked)state=k===cp?'correct locked':(k===it.picked?'wrong locked':'dim locked');return optionButton(it,k,state,function(){answerJeopardy(k);});});
+      mount(h('div',{class:'stack'},h('div',{class:'hud'},h('b',null,'🟦 JEOPARDY TRIẾT HỌC'),h('span',{class:'chip'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),
+        h('div',{class:'card qcard'},h('div',{class:'eyebrow'},cell.cat+' · '+cell.value+' ĐIỂM'),h('div',{class:'qtext'},it.q.q),h('div',{class:'opts'},opts),cell.locked?h('button',{class:'btn primary',onclick:function(){S.current=null;renderJeopardy();}},'Trở lại bảng điểm'):null)));return;}
+    var cats=JEOPARDY_CATS.map(function(cat,c){return h('div',{class:'jeopardy-cat'},cat);});
+    var cells=[];for(var r=0;r<5;r++)for(var c=0;c<4;c++){var cell=S.board[c*5+r];cells.push(h('button',{class:'jeopardy-cell'+(cell.used?' used':''),disabled:cell.used?true:null,onclick:function(target){return function(){S.current=target;renderJeopardy();};}(cell)},cell.used?'✓':cell.value));}
+    mount(h('div',{class:'stack'},h('div',{class:'hud'},h('b',null,'🟦 JEOPARDY TRIẾT HỌC'),h('span',{class:'chip'},'Điểm: '+S.score),h('button',{class:'btn ghost',onclick:gameMenu},'Thoát')),
+      h('p',{class:'muted'},'Chọn một ô điểm. Mỗi ô chỉ được mở một lần; đúng cộng điểm, sai trừ điểm.'),
+      h('div',{class:'jeopardy-board'},cats.concat(cells)),
+      S.board.every(function(x){return x.used;})?h('div',{class:'card score'},h('h2',null,'Ván đấu kết thúc'),h('div',{class:'big'},S.score+' điểm'),h('button',{class:'btn primary',onclick:startJeopardy},'Chơi lại')):null));
   }
-
-  /* ---------- Phím tắt ---------- */
-  document.addEventListener('keydown', function (e) {
-    if (!S || e.ctrlKey || e.metaKey || e.altKey) return;
-    var tag = (e.target && e.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-    var key = e.key.toLowerCase();
-    var k = '1234'.indexOf(key);
-    if (k < 0) k = 'abcd'.indexOf(key);
-    if (S.view === 'practice') {
-      if (k >= 0) pickPractice(k);
-      else if (key === 'enter' || key === 'arrowright') {
-        if (S.items[S.i].picked !== null) { e.preventDefault(); nextPractice(); }
-      } else if (key === 'r' && S.cfg.kind === 'chapter' && S.items[S.i].picked !== null) restartPractice();
-    } else if (S.view === 'mix' && !S.submitted) {
-      if (k >= 0) pickMix(k);
-      else if (key === 'arrowright' && S.i + 1 < MIX_SIZE) { S.i++; renderMix(); }
-      else if (key === 'arrowleft' && S.i > 0) { S.i--; renderMix(); }
-    }
-  });
+  function answerJeopardy(k){var cell=S.current;if(cell.locked)return;cell.locked=true;cell.item.picked=k;var ok=cell.item.order[k]===cell.item.q.a;cell.used=true;S.answered++;if(ok){S.score+=cell.value;record(cell.item.q,true);}else{S.score-=cell.value;record(cell.item.q,false);}var st=stat('jeopardy');if(S.score>st.best)st.best=S.score;save();renderJeopardy();}
 
   /* ---------- Khởi động ---------- */
   document.getElementById('navHome').addEventListener('click', home);

@@ -1,5 +1,5 @@
 /* Service worker: ưu tiên mạng (luôn lấy bản mới nhất), mất mạng thì dùng bản đã lưu. */
-var CACHE = 'mln-theory-v5';
+var CACHE = 'mln-gameshow-v6';
 var FILES = ['./', 'index.html', 'style.css', 'app.js', 'questions.js', 'theory.js', 'explain.js', 'manifest.webmanifest', 'icon.svg'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
